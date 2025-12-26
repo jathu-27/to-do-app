@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Location Finder</title>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Poppins', sans-serif;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+		}
+
+		.container {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 30px;
+			width: 100%;
+			max-width: 1400px;
+		}
+
+		.form-card {
+			background: rgba(255, 255, 255, 0.12);
+			backdrop-filter: blur(10px);
+			border-radius: 20px;
+			padding: 40px;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+			color: white;
+		}
+
+		.form-header {
+			margin-bottom: 30px;
+		}
+
+		.form-header h1 {
+			font-size: 32px;
+			margin-bottom: 10px;
+			background: linear-gradient(135deg, #ffffff, #f0f0f0);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+
+		.form-header p {
+			color: rgba(255, 255, 255, 0.85);
+			font-size: 14px;
+			line-height: 1.6;
+		}
+
+		.form-group {
+			margin-bottom: 24px;
+		}
+
+		.form-group label {
+			display: block;
+			margin-bottom: 8px;
+			font-size: 14px;
+			font-weight: 600;
+			color: rgba(255, 255, 255, 0.9);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.form-group input {
+			width: 100%;
+			padding: 14px 16px;
+			border: 1px solid rgba(255, 255, 255, 0.3);
+			border-radius: 12px;
+			background: rgba(255, 255, 255, 0.08);
+			color: white;
+			font-size: 15px;
+			font-family: 'Poppins', sans-serif;
+			transition: all 0.3s ease;
+		}
+
+		.form-group input::placeholder {
+			color: rgba(255, 255, 255, 0.6);
+		}
+
+		.form-group input:focus {
+			outline: none;
+			background: rgba(255, 255, 255, 0.15);
+			border-color: rgba(255, 255, 255, 0.5);
+			box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+		}
+
+		.suggestions-box {
+			position: relative;
+		}
+
+		.suggestions-list {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			background: rgba(30, 20, 60, 0.95);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			border-radius: 12px;
+			margin-top: 8px;
+			max-height: 300px;
+			overflow-y: auto;
+			z-index: 1000;
+			backdrop-filter: blur(10px);
+			display: none;
+		}
+
+		.suggestions-list.active {
+			display: block;
+		}
+
+		.suggestion-item {
+			padding: 12px 16px;
+			cursor: pointer;
+			color: rgba(255, 255, 255, 0.85);
+			font-size: 14px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+			transition: all 0.2s ease;
+		}
+
+		.suggestion-item:last-child {
+			border-bottom: none;
+		}
+
+		.suggestion-item:hover {
+			background: rgba(255, 255, 255, 0.15);
+			color: white;
+			padding-left: 20px;
+		}
+
+		.button-group {
+			display: flex;
+			gap: 12px;
+			margin-bottom: 30px;
+		}
+
+		.btn {
+			flex: 1;
+			padding: 14px 20px;
+			border: none;
+			border-radius: 12px;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			font-family: 'Poppins', sans-serif;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.btn-primary {
+			background: linear-gradient(135deg, #667eea, #764ba2);
+			color: white;
+			box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+		}
+
+		.btn-primary:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+		}
+
+		.btn-secondary {
+			background: rgba(255, 255, 255, 0.15);
+			color: white;
+			border: 1px solid rgba(255, 255, 255, 0.3);
+		}
+
+		.btn-secondary:hover {
+			background: rgba(255, 255, 255, 0.25);
+		}
+
+		.btn:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		.info-box {
+			background: rgba(255, 255, 255, 0.08);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			border-radius: 12px;
+			padding: 20px;
+			margin-bottom: 20px;
+		}
+
+		.info-box h3 {
+			font-size: 14px;
+			font-weight: 600;
+			color: rgba(255, 255, 255, 0.8);
+			margin-bottom: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.info-details {
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 13px;
+			line-height: 1.8;
+		}
+
+		.info-details strong {
+			color: white;
+		}
+
+		.map-container {
+			background: rgba(255, 255, 255, 0.12);
+			backdrop-filter: blur(10px);
+			border-radius: 20px;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			overflow: hidden;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+		}
+
+		#map {
+			width: 100%;
+			height: 600px;
+		}
+
+		.loader {
+			display: none;
+			width: 30px;
+			height: 30px;
+			border: 3px solid rgba(255, 255, 255, 0.3);
+			border-top-color: white;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+			position: absolute;
+			right: 12px;
+			top: 50%;
+			transform: translateY(-50%);
+		}
+
+		@keyframes spin {
+			to { transform: translateY(-50%) rotate(360deg); }
+		}
+
+		.form-group.loading input {
+			padding-right: 45px;
+		}
+
+		.form-group.loading .loader {
+			display: block;
+		}
+
+		.status-message {
+			padding: 12px 16px;
+			border-radius: 8px;
+			margin-bottom: 15px;
+			font-size: 13px;
+			display: none;
+		}
+
+		.status-message.success {
+			display: block;
+			background: rgba(76, 175, 80, 0.2);
+			color: #4caf50;
+			border: 1px solid rgba(76, 175, 80, 0.4);
+		}
+
+		.status-message.error {
+			display: block;
+			background: rgba(244, 67, 54, 0.2);
+			color: #f44336;
+			border: 1px solid rgba(244, 67, 54, 0.4);
+		}
+
+		@media (max-width: 1024px) {
+			.container {
+				grid-template-columns: 1fr;
+			}
+
+			#map {
+				height: 400px;
+			}
+
+			.form-card {
+				padding: 30px;
+			}
+
+			.form-header h1 {
+				font-size: 28px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="form-card">
+			<div class="form-header">
+				<h1>📍 Location</h1>
+				<p>Enter your details and find the exact location on the map</p>
+			</div>
+
+			<div class="status-message" id="status"></div>
+
+			<div class="form-group">
+				<label for="name">Full Name</label>
+				<input type="text" id="name" placeholder="John Doe" />
+			</div>
+
+			<div class="form-group suggestions-box">
+				<label for="address">Address</label>
+				<div style="position: relative;">
+					<input 
+						type="text" 
+						id="address" 
+						placeholder="Search address... (e.g., Eiffel Tower, Paris)" 
+					/>
+					<div class="loader"></div>
+				</div>
+				<div class="suggestions-list" id="suggestions"></div>
+			</div>
+
+			<div class="button-group">
+				<button class="btn btn-secondary" id="locBtn">📍 Use My Location</button>
+				<button class="btn btn-primary" id="saveBtn">💾 Save Details</button>
+			</div>
+
+			<div class="info-box" id="infoBox" style="display: none;">
+				<h3>Selected Location</h3>
+				<div class="info-details" id="infoDetails"></div>
+			</div>
+		</div>
+
+		<div class="map-container">
+			<div id="map"></div>
+		</div>
+	</div>
+
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script>
+		// ===== CONFIGURATION =====
+		const API_BASE = 'https://nominatim.openstreetmap.org';
+		let currentLocation = null;
+
+		// ===== DOM ELEMENTS =====
+		const nameInput = document.getElementById('name');
+		const addressInput = document.getElementById('address');
+		const suggestionsBox = document.getElementById('suggestions');
+		const locBtn = document.getElementById('locBtn');
+		const saveBtn = document.getElementById('saveBtn');
+		const infoBox = document.getElementById('infoBox');
+		const infoDetails = document.getElementById('infoDetails');
+		const statusMsg = document.getElementById('status');
+
+		// ===== MAP SETUP =====
+		const map = L.map('map').setView([20, 0], 2);
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			attribution: '© OpenStreetMap',
+			maxZoom: 19
+		}).addTo(map);
+
+		let marker = null;
+
+		function setMarker(lat, lng, label) {
+			if (marker) marker.remove();
+			marker = L.marker([lat, lng]).addTo(map)
+				.bindPopup(`<strong>${label}</strong><br/>Lat: ${lat.toFixed(4)}<br/>Lng: ${lng.toFixed(4)}`)
+				.openPopup();
+			map.setView([lat, lng], 15);
+		}
+
+		function showStatus(message, type) {
+			statusMsg.textContent = message;
+			statusMsg.className = `status-message ${type}`;
+			if (type === 'success') setTimeout(() => statusMsg.className = 'status-message', 3000);
+		}
+
+		// ===== NOMINATIM SEARCH =====
+		async function searchAddress(query) {
+			if (!query.trim() || query.length < 3) {
+				suggestionsBox.classList.remove('active');
+				return;
+			}
+
+			addressInput.parentElement.parentElement.classList.add('loading');
+
+			try {
+				const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&format=json&limit=8`, {
+					headers: { 'Accept': 'application/json' }
+				});
+
+				if (!response.ok) throw new Error('Search failed');
+				const results = await response.json();
+
+				displaySuggestions(results);
+			} catch (error) {
+				console.error('Error:', error);
+				showStatus('Failed to search address', 'error');
+				suggestionsBox.classList.remove('active');
+			} finally {
+				addressInput.parentElement.parentElement.classList.remove('loading');
+			}
+		}
+
+		function displaySuggestions(results) {
+			suggestionsBox.innerHTML = '';
+
+			if (results.length === 0) {
+				suggestionsBox.classList.remove('active');
+				return;
+			}
+
+			results.forEach(result => {
+				const div = document.createElement('div');
+				div.className = 'suggestion-item';
+				div.textContent = result.display_name;
+				div.onclick = () => selectSuggestion(result);
+				suggestionsBox.appendChild(div);
+			});
+
+			suggestionsBox.classList.add('active');
+		}
+
+		function selectSuggestion(result) {
+			addressInput.value = result.display_name;
+			suggestionsBox.classList.remove('active');
+			currentLocation = {
+				name: nameInput.value || 'Unknown',
+				address: result.display_name,
+				lat: parseFloat(result.lat),
+				lng: parseFloat(result.lon)
+			};
+			setMarker(currentLocation.lat, currentLocation.lng, result.display_name);
+			updateInfo();
+			showStatus('Location updated!', 'success');
+		}
+
+		function updateInfo() {
+			if (!currentLocation) return;
+			infoBox.style.display = 'block';
+			infoDetails.innerHTML = `
+				<div><strong>Name:</strong> ${escapeHtml(currentLocation.name)}</div>
+				<div><strong>Address:</strong> ${escapeHtml(currentLocation.address)}</div>
+				<div><strong>Coordinates:</strong> ${currentLocation.lat.toFixed(4)}° N, ${currentLocation.lng.toFixed(4)}° E</div>
+			`;
+		}
+
+		function escapeHtml(text) {
+			const map = {
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#039;'
+			};
+			return String(text).replace(/[&<>"']/g, m => map[m]);
+		}
+
+		// ===== DEBOUNCE HELPER =====
+		function debounce(fn, delay) {
+			let timeout;
+			return function(...args) {
+				clearTimeout(timeout);
+				timeout = setTimeout(() => fn(...args), delay);
+			};
+		}
+
+		// ===== GEOLOCATION =====
+		locBtn.addEventListener('click', () => {
+			if (!navigator.geolocation) {
+				showStatus('Geolocation not supported', 'error');
+				return;
+			}
+
+			locBtn.disabled = true;
+			locBtn.textContent = '⏳ Getting location...';
+
+			navigator.geolocation.getCurrentPosition(
+				async (position) => {
+					const { latitude, longitude } = position.coords;
+					setMarker(latitude, longitude, 'Your Location');
+
+					// Reverse geocode
+					try {
+						const response = await fetch(`${API_BASE}/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+						const data = await response.json();
+
+						currentLocation = {
+							name: nameInput.value || 'Current Location',
+							address: data.display_name || 'Unknown',
+							lat: latitude,
+							lng: longitude
+						};
+
+						addressInput.value = currentLocation.address;
+						updateInfo();
+						showStatus('Location found!', 'success');
+					} catch (error) {
+						console.error('Reverse geocoding failed:', error);
+						showStatus('Could not fetch address details', 'error');
+					}
+
+					locBtn.disabled = false;
+					locBtn.textContent = '📍 Use My Location';
+				},
+				(error) => {
+					showStatus('Could not access your location', 'error');
+					locBtn.disabled = false;
+					locBtn.textContent = '📍 Use My Location';
+				}
+			);
+		});
+
+		// ===== SAVE FUNCTIONALITY =====
+		saveBtn.addEventListener('click', () => {
+			const name = nameInput.value.trim();
+			const address = addressInput.value.trim();
+
+			if (!name || !address) {
+				showStatus('Please fill in all fields', 'error');
+				return;
+			}
+
+			if (!currentLocation) {
+				showStatus('Please select a location from the map', 'error');
+				return;
+			}
+
+			const data = {
+				name,
+				address,
+				lat: currentLocation.lat,
+				lng: currentLocation.lng,
+				timestamp: new Date().toISOString()
+			};
+
+			// Store in localStorage as example
+			localStorage.setItem('lastLocation', JSON.stringify(data));
+			showStatus('✓ Location saved successfully!', 'success');
+
+			// You can also send this to a server:
+			console.log('Saved data:', data);
+		});
+
+		// ===== EVENT LISTENERS =====
+		addressInput.addEventListener('input', debounce((e) => {
+			searchAddress(e.target.value);
+		}, 400));
+
+		// Close suggestions when clicking outside
+		document.addEventListener('click', (e) => {
+			if (e.target !== addressInput) {
+				suggestionsBox.classList.remove('active');
+			}
+		});
+
+		// Load saved location on page load
+		window.addEventListener('load', () => {
+			const saved = localStorage.getItem('lastLocation');
+			if (saved) {
+				const data = JSON.parse(saved);
+				nameInput.value = data.name;
+				addressInput.value = data.address;
+				currentLocation = data;
+				setMarker(data.lat, data.lng, data.address);
+				updateInfo();
+			}
+		});
+	</script>
+</body>
+</html>
+	<body>
+		<div class="wrap">
+			<div class="card">
+				<h1>Enter your details</h1>
+				<p class="lead">Type your address and pick a suggestion — the map will show location details.</p>
+
+				<div class="form-row">
+					<label for="name">Name</label>
+					<input id="name" type="text" placeholder="Full name" autocomplete="name">
+				</div>
+
+				<div class="form-row suggestions">
+					<label for="address">Address</label>
+					<input id="address" type="text" placeholder="Start typing an address" autocomplete="street-address" aria-autocomplete="list" aria-controls="addr-list">
+					<div id="addr-list" class="suggestions-list" role="listbox" style="display:none"></div>
+				</div>
+
+				<div class="row">
+					<div class="col">
+						<button id="use-location" class="btn" type="button">Use my location</button>
+					</div>
+					<div class="col" style="display:flex;justify-content:flex-end;align-items:center">
+						<button id="save" class="btn" type="button">Save</button>
+					</div>
+				</div>
+
+				<div class="details" id="info">
+					<div class="muted">Selected:</div>
+					<div id="selected">No selection yet</div>
+				</div>
+
+				<div class="attribution">Geocoding by OpenStreetMap / Nominatim · Map by Leaflet</div>
+			</div>
+
+			<div id="map" class="card"></div>
+		</div>
+
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7kT0s0q2xX1k2w6Z5x7o0b5e9L3z8v2Y9m0B4M=" crossorigin=""></script>
+		<script>
+			// Helper: debounce
+			function debounce(fn, wait){let t;return (...a)=>{clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),wait)}}
+
+			const addressEl = document.getElementById('address');
+			const listEl = document.getElementById('addr-list');
+			const selectedEl = document.getElementById('selected');
+			const nameEl = document.getElementById('name');
+			const useLocBtn = document.getElementById('use-location');
+
+			// Leaflet map
+			const map = L.map('map', {zoomControl:true, attributionControl:false}).setView([20,0],2);
+			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
+			let marker = null;
+
+			function setMarker(lat,lon,label){
+				if(marker) marker.remove();
+				marker = L.marker([lat,lon]).addTo(map).bindPopup(label || '').openPopup();
+				map.setView([lat,lon],15);
+			}
+
+			async function nominatimSearch(q){
+				const url = new URL('https://nominatim.openstreetmap.org/search');
+				url.searchParams.set('q', q);
+				url.searchParams.set('format', 'json');
+				url.searchParams.set('addressdetails', '1');
+				url.searchParams.set('limit', '6');
+				// For polite usage, you may add &email=your@example.com
+				const res = await fetch(url.toString(), {headers:{'Accept':'application/json'}});
+				if(!res.ok) throw new Error('Geocode error');
+				return res.json();
+			}
+
+			function showSuggestions(items){
+				listEl.innerHTML='';
+				if(!items || items.length===0){ listEl.style.display='none'; return }
+				items.forEach(it=>{
+					const div = document.createElement('div');
+					div.className='suggest-item';
+					div.textContent = it.display_name;
+					div.role = 'option';
+					div.addEventListener('click', ()=>{
+						addressEl.value = it.display_name;
+						listEl.style.display='none';
+						setMarker(it.lat, it.lon, it.display_name);
+						fillDetails(it);
+					});
+					listEl.appendChild(div);
+				});
+				listEl.style.display='block';
+			}
+
+			function fillDetails(item){
+				selectedEl.innerHTML = `
+					<strong>${escapeHtml(nameEl.value || '—')}</strong><br>
+					<div class="muted">${escapeHtml(item.display_name)}</div>
+					<div class="muted">Latitude: ${item.lat} · Longitude: ${item.lon}</div>
+				`;
+			}
+
+			function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
+
+			const doSearch = debounce(async function(){
+				const q = addressEl.value.trim();
+				if(q.length < 3){ listEl.style.display='none'; return }
+				try{
+					const items = await nominatimSearch(q);
+					showSuggestions(items);
+				}catch(e){ console.error(e); listEl.style.display='none' }
+			}, 350);
+
+			addressEl.addEventListener('input', doSearch);
+			document.addEventListener('click', (e)=>{ if(!listEl.contains(e.target) && e.target !== addressEl) listEl.style.display='none' });
+
+			// Use browser geolocation and reverse geocode
+			useLocBtn.addEventListener('click', ()=>{
+				if(!navigator.geolocation){ alert('Geolocation not supported'); return }
+				useLocBtn.disabled = true;
+				navigator.geolocation.getCurrentPosition(async pos=>{
+					const lat = pos.coords.latitude; const lon = pos.coords.longitude;
+					setMarker(lat,lon,'Your location');
+					// reverse geocode
+					const url = new URL('https://nominatim.openstreetmap.org/reverse');
+					url.searchParams.set('lat', lat);
+					url.searchParams.set('lon', lon);
+					url.searchParams.set('format','json');
+					url.searchParams.set('addressdetails','1');
+					try{
+						const res = await fetch(url.toString(), {headers:{'Accept':'application/json'}});
+						const data = await res.json();
+						if(data && data.display_name){
+							addressEl.value = data.display_name;
+							fillDetails({display_name: data.display_name, lat, lon});
+						}
+					}catch(e){console.error(e)}
+					useLocBtn.disabled = false;
+				}, err=>{alert('Could not get location'); useLocBtn.disabled=false});
+			});
+
+			// Save button — placeholder for integration
+			document.getElementById('save').addEventListener('click', ()=>{
+				const payload = {
+					name: nameEl.value.trim(),
+					address: addressEl.value.trim(),
+					location: marker ? {lat: marker.getLatLng().lat, lng: marker.getLatLng().lng} : null
+				};
+				alert('Form data:\n' + JSON.stringify(payload, null, 2));
+			});
+
+			// Small helper to set initial view
+			map.whenReady(()=>{ if(document.documentElement.clientWidth < 800) map.setView([20,0],2) });
+		</script>
+	</body>
+</html>
